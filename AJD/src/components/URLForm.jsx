@@ -19,7 +19,8 @@ const URLForm = ({ setResults, setLoading }) => {
 
         try {
             const response = await axios.post('http://localhost:8080/api/scrape', { url });
-            setResults(response.data);
+                setResults(response.data);
+                // setLoading(true);
         } catch (err) {
             setError('Failed to fetch data. Please check the URL and try again.');
         } finally {
