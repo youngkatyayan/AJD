@@ -1,13 +1,15 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import bodyParser from "body-parser";
-import puppeteer from "puppeteer";
+import axios from "axios";
+import { Readability } from "@mozilla/readability";
+import { JSDOM } from "jsdom";
+import { htmlToText } from "html-to-text";
 import 'colors'
+
 const app = express();
 const PORT = 8080;
 
-dotenv.config();
 app.use(cors());
 app.use(bodyParser.json());
 
@@ -17,58 +19,35 @@ app.post("/api/scrape", async (req, res) => {
   const { url } = req.body;
 
   if (!url) {
-    return res.status(400).json({ error: "URL is required" });
+    return res.status(400).json({ error: "URL is required." });
   }
 
   try {
-    const browser = await puppeteer.launch({ headless: true });
-    const page = await browser.newPage();
+    const { data: htmlContent } = await axios.get(url);
 
-    const formattedUrl = url.startsWith("http") ? url : `http://${url}`;
-    await page.goto(formattedUrl, { waitUntil: "domcontentloaded" });
-
-    const totalText = await page.evaluate(() => {
-        const excludedSelectors = [
-          "nav", "header", "footer", "aside", ".sidebar", ".ads",
-          "script", "style", ".popup", ".advertisement", ".hidden",
-          ".footer-links", ".social-share", ".related-posts"
-        ];
-        excludedSelectors.forEach((selector) => {
-            document.querySelectorAll(selector).forEach((el) => el.remove());
-          });;
-
-          return document.body.innerText.replace(/\s+/g, " ").trim();
+    const totalReadableText = htmlToText(htmlContent, {
+      wordwrap: false,
+      preserveNewlines: false,
+      selectors: [
+        { selector: "img", format: "skip" }, 
+        { selector: "nav", format: "skip" }, 
+        { selector: "footer", format: "skip" }, 
+      ],
     });
-    const totalWordCount = countWords(totalText);
+    const totalWordCount = countWords(totalReadableText);
 
-    const articleText = await page.evaluate(() => {
-      const selectors = [
-        "article",
-        "main",
-        ".post-content",
-        ".entry-content",
-        ".blog-post",
-        ".content-area",
-        ".single-post",
-        "section",
-      ];
+    const dom = new JSDOM(htmlContent, { url });
+    const reader = new Readability(dom.window.document);
+    const article = reader.parse();
 
-      let content = "";
-      for (const selector of selectors) {
-        const element = document.querySelector(selector);
-        if (element && element.innerText.trim().length > 200) {
-          content = element.innerText.replace(/\s+/g, " ").trim(); 
-          break;
-        }
-      }
-      return content;
-    });
+    let articleText = "";
+    if (article && article.textContent) {
+      articleText = article.textContent;
+    }
     const articleWordCount = countWords(articleText);
 
-    await browser.close();
-
     res.json({
-      url: formattedUrl,
+      url,
       totalWordCount,
       articleWordCount,
     });
@@ -79,9 +58,9 @@ app.post("/api/scrape", async (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("Server is working!");
+  res.send("Server is running!");
 });
 
 app.listen(PORT, () => {
-  console.log(`Server is running on PORT ${PORT}`.bgCyan.white);
+  console.log(`Server running on PORT ${PORT}`.bgMagenta.white);
 });

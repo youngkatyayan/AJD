@@ -5,19 +5,25 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "AJD": "cd.. && npm run dev --prefix ./AJD",
+    "server": "nodemon index.js",
+    "dev": "concurrently \"npm run server\" \"npm run AJD\""
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@mozilla/readability": "^0.5.0",
     "axios": "^1.7.7",
     "body-parser": "^1.20.3",
     "cheerio": "^1.0.0",
     "colors": "^1.4.0",
+    "concurrently": "^9.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
+    "html-to-text": "^9.0.5",
+    "jsdom": "^25.0.1",
     "nodemon": "^3.1.7",
     "puppeteer": "^23.8.0"
   }
